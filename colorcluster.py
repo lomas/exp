@@ -13,11 +13,14 @@ def extract_color_info(img_dir):
                 filepath = os.path.join(img_dir,filename)
                 img = cv2.imread(filepath,0)
                 h,w = img.shape
+#crop image
                 x0 = np.int64(w/4)
                 x1 = np.int64(w*3/4)
                 y0 = np.int64(h/4)
                 y1 = np.int64(h*3/4)
+                img = img[y0:y1, x0:x1]
                 img = np.float32(img)
+#color moment
                 m0 = np.sum(img) / img.size
                 h,w = img.shape
                 m1 = 0
