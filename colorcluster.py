@@ -14,12 +14,19 @@ def extract_color_info(img_dir):
                 img = cv2.imread(filepath,0)
                 h,w = img.shape
 #crop image
-                x0 = np.int64(w/4)
-                x1 = np.int64(w*3/4)
-                y0 = np.int64(h/4)
-                y1 = np.int64(h*3/4)
+                x0 = np.int64(w*0.3)
+                x1 = np.int64(w*0.7)
+                y0 = np.int64(h * 0.4)
+                y1 = np.int64(h * 0.6)
+
                 img = img[y0:y1, x0:x1]
                 img = np.float32(img)
+#texture
+                dx = cv2.Sobel(img, cv2.CV_32F, 1,0)
+                dy = cv2.Sobel(img, cv2.CV_32F, 0,1)
+#                dx = np.absolute(dx)
+#                dy = np.absolute(dy)
+                img = (dx+dy)/2
 #color moment
                 m0 = np.sum(img) / img.size
                 h,w = img.shape
@@ -40,7 +47,8 @@ def extract_color_info(img_dir):
                 m2 = flag * m2
                 m2 = np.power(m2,0.33333)
                 m2 = flag * m2
-                print("extract: %s" %filename)
+                m2 = np.absolute(m2)
+                print("extract: %s (%.2f %.2f %.2f)" %(filename,m0,m1,m2))
                 if not info:
                     info = [m0,m1,m2]
                     path_list = [filepath]
@@ -63,6 +71,6 @@ def main_entry(img_dir):
         img = cv2.imread(path_list[idx],0)
         filepath = "d:\\tmp\\colorcluster\\%d_%d.jpg" %(idx,bestLabel[idx])
         cv2.imwrite(filepath, img)
-
+    print centers
 if __name__ == "__main__":
     main_entry("d:\\tmp\\pos\\")
