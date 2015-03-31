@@ -40,6 +40,7 @@ def extract_color_info(img_dir):
 
                 img = img[y0:y1, x0:x1]
                 img = np.float32(img)
+                m0,m1,m2 = extract_moment(img)
 #texture
                 dx = cv2.Sobel(img, cv2.CV_32F, 1,0)
                 dy = cv2.Sobel(img, cv2.CV_32F, 0,1)
@@ -47,19 +48,22 @@ def extract_color_info(img_dir):
 #                dy = np.absolute(dy)
                 img = (dx+dy)/2
 #color moment
-                m0,m1,m2 = extract_moment(img)
-                print("extract: %s (%.2f %.2f %.2f)" %(filename,m0,m1,m2))
+                m3,m4,m5 = extract_moment(img)
+                print("extract: %s (%.2f %.2f %.2f %.2f %.2f %.2f\n)" %(filename, m0, m1,m2,m3,m4,m5))
                 if not info:
-                    info = [m0,m1,m2]
+                    info = [m0,m1,m2,m3,m4,m5]
                     path_list = [filepath]
                 else:
                     info.append(m0)
                     info.append(m1)
                     info.append(m2)
+                    info.append(m3)
+                    info.append(m4)
+                    info.append(m5)
                     path_list.append(filepath)
     if info:
         info = np.array(info)
-        info = info.reshape((-1,3))
+        info = info.reshape((-1,6))
         info = np.float32(info)
     return((path_list, info))
 
