@@ -3,6 +3,25 @@ import numpy as np
 import sys
 import os
 
+
+def extract_moment(img):
+    img = np.float32(img)
+    m0 = np.sum(img) / img.size
+    h,w = img.shape
+    offset = [m0 for i in range(h*w)]
+    offset = np.array(offset)
+    offset.shape = (h,w)
+    img = img - offset
+    img2 = img * img
+    m1 = np.sum(img2) / img.size
+    m1 = np.sqrt(m1)
+    img3 = img2 * img
+    m2 = np.sum(img3) / img.size
+    if m2 < 0:
+        m2 = -m2 
+    m2 = np.power(m2,  0.33333)
+    return((m0,m1,m2))       
+
 def extract_color_info(img_dir):
     info = []
     path_list = []
@@ -28,26 +47,7 @@ def extract_color_info(img_dir):
 #                dy = np.absolute(dy)
                 img = (dx+dy)/2
 #color moment
-                m0 = np.sum(img) / img.size
-                h,w = img.shape
-                m1 = 0
-                m2 = 0
-                for y in range(h):
-                    for x in range(w):
-                        v = img[y,x] - m0
-                        m1 = m1 + v * v
-                        m2 = m2 + v * v * v
-                m1 = m1 / img.size
-                m2 = m2 / img.size
-                m1 = np.sqrt(m1)
-           
-                flag = 1     
-                if m2 < 0:
-                    flag = -1
-                m2 = flag * m2
-                m2 = np.power(m2,0.33333)
-                m2 = flag * m2
-                m2 = np.absolute(m2)
+                m0,m1,m2 = extract_moment(img)
                 print("extract: %s (%.2f %.2f %.2f)" %(filename,m0,m1,m2))
                 if not info:
                     info = [m0,m1,m2]
