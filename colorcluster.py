@@ -52,16 +52,16 @@ def extract_color_info(img_dir):
                 img = (dx+dy)/2
 #color moment
                 m3,m4,m5 = extract_moment(img)
-                print("extract: %s (%.2f %.2f %.2f)\n" %(filename, m0, m1,m2))
+                print("extract: %s (%.2f %.2f %.2f %.2f %.2f %.2f)\n" %(filename, m0, m1,m2,m3,m4,m5))
                 if not info:
-                    info = [m3,m4,m5]
+                    info = [m0,m1,m2,m3,m4,m5]
                     path_list = [filepath]
                 else:
-                    info.extend([m3,m4,m5])
+                    info.extend([m0,m1,m2,m3,m4,m5])
                     path_list.append(filepath)
     if info:
         info = np.array(info)
-        info = info.reshape((-1,3))
+        info = info.reshape((-1,6))
         info = np.float32(info)
     return((path_list, info))
 
@@ -78,10 +78,48 @@ def knn(image_info, centers, centers_weight):
         dist = dist[sortidx[0:nei]]
         dist = 1 - dist / np.sum(dist)
         w = centers_weight[sortidx[0:nei]]
-        PrPos[idx] = np.sum(w * dist)
+        #pdb.set_trace()
+        PrPos[idx] = np.sum(w * dist) / np.sum(dist)
     return(PrPos) 
 
 
+def calc_hitrate(cluster_pos, kmeanlabel, reallabel):
+
+    testlabel = np.zeros(reallabel.shape)
+    for idx in range(cluster_pos.size):
+        if cluster_pos[idx] > 0.5:
+            j = (kmeanlabel == idx)
+            testlabel[j] = 1
+
+
+    testlabel = np.int32(testlabel)
+    reallabel = np.int32(reallabel)
+    hitrate = np.sum(testlabel == reallabel) / np.float64(reallabel.size)
+    return((testlabel, hitrate))
+
+
+def classify_it(kmeanlabel, cluster_num, posneg):
+    cluster_pos = np.zeros((cluster_num, 1))
+    cluster_size = np.zeros((cluster_num, 1))
+    for idx in range(kmeanlabel.size):
+        kl = kmeanlabel[idx,0]
+        cluster_size[kl,0] = cluster_size[kl, 0] + 1
+        cluster_pos[kl, 0] = cluster_pos[kl, 0] + posneg[idx]
+    cluster_pos = cluster_pos / cluster_size 
+
+
+    testlabel, hitrate = calc_hitrate(cluster_pos, kmeanlabel, posneg)
+    return((cluster_pos, testlabel, hitrate))
+
+def normalize(data):
+    for k in range(data.shape[1]):
+        v = data[:,k]
+        m0 = v.min()
+        m1 = v.max()
+    #    pdb.set_trace()
+        v = (v - m0) / (m1 - m0)
+        data[:,k] = v
+    return(data)
 
 def main_entry(pos_dir, neg_dir):
     pos_path_list, pos_info = extract_color_info(pos_dir)
@@ -89,62 +127,57 @@ def main_entry(pos_dir, neg_dir):
 
 
 
-    cluster_num = 20
+    cluster_num = 200
     term_crit = (cv2.TERM_CRITERIA_EPS,30,0.1)
     posflag = [1 for k in range(pos_info.shape[0])]
     negflag = [0 for k in range(neg_info.shape[0])]
     posflag.extend(negflag)
     posneg = np.array(posflag)
+    posneg.shape = (posneg.size, 1)
     image_info = np.vstack((pos_info, neg_info))
     pos_path_list.extend(neg_path_list)
     path_list = pos_path_list
-    ret,bestLabel,centers = cv2.kmeans(image_info, cluster_num, term_crit, 10, 0)
 
-    cluster_pos = np.zeros((cluster_num, 1))
-    cluster_size = np.zeros((cluster_num, 1))
-    for idx in range(image_info.shape[0]):
-        label = bestLabel[idx]
-        cluster_size[label,0] = cluster_size[label, 0] + 1
-        cluster_pos[label, 0] = cluster_pos[label, 0] + posneg[idx]
-    cluster_pos = cluster_pos / cluster_size 
+    #image_info = normalize(image_info)
 
-    PrPos = knn(image_info, centers, cluster_pos)
+    ret,kmeanlabel0,centers0 = cv2.kmeans(image_info[:,0:3], cluster_num, term_crit, 10, 0)
 #    pdb.set_trace()
-    thresh = 0.9
-    newLabel = np.int64(PrPos > thresh)
-    bgs = np.int64(posneg)
-    bgs = np.reshape(bgs, newLabel.shape)
-    hitrate1 = np.sum(bgs == newLabel) / np.float64(bgs.size)
+    posrate0, label0, hitrate0 = classify_it(kmeanlabel0, cluster_num, posneg)
 
 
-    kmLabel = np.zeros(bgs.shape)
-    for idx in range(cluster_num):
-        if cluster_pos[idx] > 0.5:
-            j = (bestLabel == idx)
-            kmLabel[j] = 1
+    ret,kmeanlabel1,centers1 = cv2.kmeans(image_info[:,3:6], cluster_num, term_crit, 10, 0)
+    posrate1, label1, hitrate1 = classify_it(kmeanlabel1, cluster_num, posneg)
 
-    kmLabel = np.int64(kmLabel)
-    hitrate0 = np.sum(bgs == kmLabel) / np.float64(bgs.size)
-    if 0:
-        for idx in range(image_info.shape[0]):
-            img = cv2.imread(path_list[idx],0)
-            filepath = "d:\\tmp\\colorcluster\\%d_%d.jpg" %(idx,bestLabel[idx])
-            cv2.imwrite(filepath, img)
+   
+    hitrate2 = 0 
+    for k in range(posneg.size):
+        l0 = kmeanlabel0[k,0]
+        l1 = kmeanlabel1[k,0]
+        w = (posrate0[l0,0] + posrate1[l1,0])/2
+        if w > 0.5:
+            l = 1
+        else:
+            l = 0
+        if np.int64(l) == np.int64(posneg[k,0]):
+            hitrate2 = hitrate2 + 1
+    hitrate2 = hitrate2 / np.float64(posneg.size)
+        
 
-    try:
-        f = open('d:\\tmp\\centers.txt','w')
-        for row in range(centers.shape[0]):
-            s = "%ff, %ff, %ff, %ff,\n" %(centers[row,0], centers[row,1], centers[row,2], cluster_pos[row,0])
-            f.write(s)
-        f.close()
-    except Exception, e:
-        print Exception, ":", e
+    if 1:
+        try:
+            f = open('d:\\tmp\\centers.txt','w')
+            for row in range(centers1.shape[0]):
+                s = "%ff, %ff, %ff, %ff,\n" %(centers1[row,0], centers1[row,1], centers1[row,2], posrate1[row,0])
+                f.write(s)
+            f.close()
+        except Exception, e:
+            print Exception, ":", e
 
 
-    print centers
-    print cluster_pos
     print hitrate0
     print hitrate1
+    print hitrate2
+
 
 if __name__ == "__main__":
     main_entry("d:\\tmp\\drv\\pos\\", "d:\\tmp\\drv\\neg\\")
