@@ -14,10 +14,18 @@ def load_script(scriptpath):
 	fin = open(scriptpath, 'r')
 	for rawline in fin:
 		line = rawline.strip().split(' ')
-		x0 = np.int32(np.float32(line[0]))
-		y0 = np.int32(np.float32(line[1]))
-		x1 = np.int32(np.float32(line[2]))
-		y1 = np.int32(np.float32(line[3]))
+		newline = []
+		for elem in line:
+			if len(elem) == 0:
+				continue
+			if len(newline) == 0:
+				newline = [elem]
+			else:
+				newline.append(elem)
+		x0 = np.int32(np.float32(newline[0]))
+		y0 = np.int32(np.float32(newline[1]))
+		x1 = np.int32(np.float32(newline[2]))
+		y1 = np.int32(np.float32(newline[3]))
 		if len(result) < 1:
 			result = [x0,y0,x1,y1]
 		else:
@@ -53,6 +61,7 @@ def parse_pos(rootdir,outdir):
 	    for name in files:
 		    shortname,ext = os.path.splitext(name)
 		    if 0 == cmp(ext, '.jpg'):
+			    print shortname
 			    imgpath = os.path.join(rootdir,name)
 			    scriptpath = os.path.join(rootdir,script_filename(shortname))
 			    img = cv2.imread(imgpath,0)
@@ -60,7 +69,6 @@ def parse_pos(rootdir,outdir):
 			    kp = siftfeat.detect(img)
 			    kp,des = siftfeat.compute(img,kp)
 			    save_sift(outdir+name+".sift",script,kp,des)
-			    print shortname
 			    
     return(kp, des)
 
