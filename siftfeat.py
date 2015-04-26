@@ -57,11 +57,13 @@ def save_sift(outpath,script, kp, des):
 	fout.close()
 def parse_pos(rootdir,outdir):
     siftfeat = cv2.SIFT()
+    num = 1
     for roordir,pdirs,files in os.walk(rootdir):
 	    for name in files:
 		    shortname,ext = os.path.splitext(name)
 		    if 0 == cmp(ext, '.jpg'):
-			    print shortname
+			    print("[%d][%s]" %(num, name))
+			    num = num + 1
 			    imgpath = os.path.join(rootdir,name)
 			    scriptpath = os.path.join(rootdir,script_filename(shortname))
 			    img = cv2.imread(imgpath,0)
@@ -69,11 +71,9 @@ def parse_pos(rootdir,outdir):
 			    kp = siftfeat.detect(img)
 			    kp,des = siftfeat.compute(img,kp)
 			    save_sift(outdir+name+".sift",script,kp,des)
-			    
-    return(kp, des)
 
 if __name__ == "__main__":
-    rootdir = os.path.abspath('../../dataset/horse/pos') + '/'
-    parse_pos(rootdir,'out/')  
+    rootdir = os.path.abspath('.') + '/pos/'
+    parse_pos(rootdir,'sift/')  
   
   

@@ -1,7 +1,8 @@
 import os
 import sys
 import sklearn.cluster as skcluster
-from sklearn.neighbors import kneighbors_graph
+from sklearn.neighbors import kneighbors_graph #using connectivity to avoid memory error in clustring
+from sklearn.externals import joblib #save/load models
 import numpy as np
 import pdb
 
@@ -42,18 +43,19 @@ def entry(rootdir, outdir):
     print "run clustering\n"
     K = 1000
     connectivity = kneighbors_graph(samples, n_neighbors=10)
-    cluster=skcluster.AgglomerativeClustering(K, connectivity=connectivity)
-    cluster=cluster.fit(samples)
+    cluster_tree=skcluster.AgglomerativeClustering(K, connectivity=connectivity)
+    cluster_tree=cluster_tree.fit(samples)
+    joblib.dump(cluster_tree, 'models/cluster_tree.pkl')
     print "clustering done\n"
     i = 0
     for idx in range(len(sizes)):
-        fout = open(outdir+filenames[idx]+".cluster","w")
+        fout = open(outdir+filenames[idx]+".cluster_tree","w")
         for k in range(sizes[idx]):
-            line = str(cluster.labels_[i]) + "\n"
+            line = str(cluster_tree.labels_[i]) + "\n"
             i = i + 1
             fout.write(line)
         fout.close()
-    return(cluster)
+    return(cluster_tree)
 if __name__=="__main__":
     rootdir=os.path.abspath('.') + '/'
     cluster = entry(rootdir+"sift/", "cluster/") 
