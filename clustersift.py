@@ -10,6 +10,7 @@ def load_sift(rootdir):
     result = []
     filename = [] #file name
     size = [] #sift number in each file
+    attribs = []
     for roots,dirs,files in os.walk(rootdir):
         for name in files:
             shortname,ext = os.path.splitext(name)
@@ -20,11 +21,16 @@ def load_sift(rootdir):
                 for rawline in fin:
                     line=rawline.strip().split(' ')
                     num = num + 1
+		    if len(attribs)  < 1:
+			    attribs = [line[0], line[1], line[2], line[3], line[4]]
+		    else:
+			    attribs.extend([line[0], line[1], line[2], line[3], line[4]])
                     for idx in range(len(line) - 5):
                              if len(result) < 1:
                                  result = [np.float32(line[idx+5])]
                              else:
                                  result.append(np.float32(line[idx+5]))
+
                 fin.close()
                 if len(size) < 1:
                     size = [num]
@@ -36,10 +42,10 @@ def load_sift(rootdir):
     result = np.array(result)
     result.shape = (-1,128)
     print "result " + str(result.shape[0]) + " " + str(result.shape[1]) + "\n"
-    return((result,filename,size))
+    return((result,filename,size,attribs))
 
 def entry(rootdir, outdir):
-    samples, filenames, sizes = load_sift(rootdir)
+    samples, filenames, sizes, attribs = load_sift(rootdir)
     print "run clustering\n"
     K = 1000
     connectivity = kneighbors_graph(samples, n_neighbors=10)
@@ -49,9 +55,9 @@ def entry(rootdir, outdir):
     print "clustering done\n"
     i = 0
     for idx in range(len(sizes)):
-        fout = open(outdir+filenames[idx]+".cluster_tree","w")
+        fout = open(outdir+filenames[idx]+".clustersift","w")
         for k in range(sizes[idx]):
-            line = str(cluster_tree.labels_[i]) + "\n"
+            line = attribs[i*5] + " " + attribs[i*5+1] + " " + attribs[i*5+2] +" "+ attribs[i*5+3] +" "+ attribs[i*5+4] +" "+ str(cluster_tree.labels_[i]) + "\n"
             i = i + 1
             fout.write(line)
         fout.close()
