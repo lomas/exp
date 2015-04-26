@@ -1,6 +1,7 @@
 import os
 import sys
 import sklearn.cluster as skcluster
+from sklearn.neighbors import kneighbors_graph
 import numpy as np
 import pdb
 
@@ -40,7 +41,8 @@ def entry(rootdir, outdir):
     samples, filenames, sizes = load_sift(rootdir)
     print "run clustering\n"
     K = 1000
-    cluster=skcluster.AgglomerativeClustering(K)
+    connectivity = kneighbors_graph(samples, n_neighbors=10)
+    cluster=skcluster.AgglomerativeClustering(K, connectivity=connectivity)
     cluster=cluster.fit(samples)
     print "clustering done\n"
     i = 0
