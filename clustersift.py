@@ -47,7 +47,7 @@ def load_sift(rootdir):
 def entry(rootdir, outdir):
     samples, filenames, sizes, attribs = load_sift(rootdir)
     print "run clustering\n"
-    K = 1000
+    K = 512
     connectivity = kneighbors_graph(samples, n_neighbors=10)
     cluster_tree=skcluster.AgglomerativeClustering(K, connectivity=connectivity)
     cluster_tree=cluster_tree.fit(samples)
