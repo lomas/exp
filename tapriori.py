@@ -81,7 +81,16 @@ class tapriori:
             prevfqits = self.get_next_freqitems(prevfqits)
         return result 
 
-
+def do_stat(dataDict, fs, freqItems):
+    result = {}
+    for item in freqItems:
+        result[tuple(item)] = [0,0]
+    for key in dataDict.keys():
+        item = tuple(dataDict[key])
+        f = fs[key]
+        if item in result:
+            result[item][f] += 1
+    return result
 
 def example():
     data = {'a':[1,2,5],'b':[2,4],'c':[2,3],'d':[1,2,4],'e':[1,3],'f':[2,3],'g':[1,3],'h':[1,2,3,5],'i':[1,2,3]}
@@ -90,6 +99,7 @@ def example():
 
 def load_transc(rootdir):
     result = {}
+    flags = {}
     nextkey = 0
     for root, pdirs, names in os.walk(rootdir):
         for name in names:
@@ -101,13 +111,19 @@ def load_transc(rootdir):
                     items = line.strip().split(' ')
                     transc = [int(k) for k in items]
                     result[nextkey] = transc[0:-1] #ignore the last item
+                    flags[nextkey] = transc[-1]
                     nextkey += 1
                 fin.close()
                 print shortname + ' ' + str(nextkey)
-    return result
+    return result, flags
 
 if __name__=="__main__":
     rootdir = os.path.abspath('.') + '\\'
-    data = load_transc(rootdir + 'transc\\')
+    data,flags = load_transc(rootdir + 'transc\\')
+    #pdb.set_trace()
     inst = tapriori(dataDict = data, minsupport=0.002, minconfidence=0.2)
-    print inst.run()
+    items = inst.run()
+    print "# of item with minimum support = " + str(len(items))
+    result = do_stat(data, flags, items)
+    for key in result.keys():
+        print str(key) + " " + str(result[key]) 
