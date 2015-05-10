@@ -59,7 +59,7 @@ class tapriori:
             for each in L:
                 if set(each) <= set(self.data[key]): #subset of input items
                     if tuple(each) in fqdict:
-                        fqdict[tuple(each)] += 1
+                        fqdict[tuple(each)] += 1 #key should not be list. tuple is ok
                     else:
                         fqdict[tuple(each)] = 1
         t = self.minsup * len(self.data)
