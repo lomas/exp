@@ -69,6 +69,6 @@ def entry(rootdir,outdir, K):
 				fullpath = os.path.join(outdir, name + ".trasc")
 				save_transaction(trans, fullpath)
 if __name__ == "__main__":
-	K = 512
+	K = 512 #cluster number
 	rootdir = os.path.abspath('.') + '/'
 	entry(rootdir + 'cluster/', rootdir + 'transc/', K)	
