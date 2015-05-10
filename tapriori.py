@@ -26,10 +26,12 @@ class tapriori:
                 else:
                     L[item] = 1
         fqits = [] #freq items 
+#        pdb.set_trace()
         t = len(self.data) * self.minsup
         for key in L.keys():
             if L[key] >= t:
                 fqits.append([key])
+        print "# of freq_1 " + str(len(fqits))
         return fqits
     
 
@@ -81,10 +83,31 @@ class tapriori:
 
 
 
-def main():
+def example():
     data = {'a':[1,2,5],'b':[2,4],'c':[2,3],'d':[1,2,4],'e':[1,3],'f':[2,3],'g':[1,3],'h':[1,2,3,5],'i':[1,2,3]}
     inst = tapriori(dataDict = data)
     print inst.run()
 
+def load_transc(rootdir):
+    result = {}
+    nextkey = 0
+    for root, pdirs, names in os.walk(rootdir):
+        for name in names:
+            shortname,ext = os.path.splitext(name)
+            if 0 == cmp(ext, ".trasc"):
+                fullpath = os.path.join(root, name)
+                fin = open(fullpath, 'r')
+                for line in fin:
+                    items = line.strip().split(' ')
+                    transc = [int(k) for k in items]
+                    result[nextkey] = transc[0:-1] #ignore the last item
+                    nextkey += 1
+                fin.close()
+                print shortname + ' ' + str(nextkey)
+    return result
+
 if __name__=="__main__":
-    main()
+    rootdir = os.path.abspath('.') + '\\'
+    data = load_transc(rootdir + 'transc\\')
+    inst = tapriori(dataDict = data, minsupport=0.002, minconfidence=0.2)
+    print inst.run()
