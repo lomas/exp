@@ -2,6 +2,7 @@ import os
 import sys
 import itertools
 import pdb
+import pickle
 
 class tapriori:
     def __init__(self, dataDict , minsupport=0.2, minconfidence = 0.8):
@@ -121,9 +122,13 @@ if __name__=="__main__":
     rootdir = os.path.abspath('.') + '\\'
     data,flags = load_transc(rootdir + 'transc\\')
     #pdb.set_trace()
-    inst = tapriori(dataDict = data, minsupport=0.002, minconfidence=0.2)
+    inst = tapriori(dataDict = data, minsupport=0.002, minconfidence=0.8)
     items = inst.run()
     print "# of item with minimum support = " + str(len(items))
     result = do_stat(data, flags, items)
+    fout = open('rules.txt', 'w')
+    pickle.dump(result, fout)
+    fout.close()
+    print "key -> [neg, pos]"
     for key in result.keys():
-        print str(key) + " " + str(result[key]) 
+        print str(key) + "->" + str(result[key])
