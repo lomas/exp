@@ -39,6 +39,7 @@ def train(imgpath, featpath, outpath):
     covxf = cov[imgdims:,0:imgdims]
 #    pdb.set_trace()
     print cov.shape
+    cov = cov + 0.0001 * np.eye(cov.shape[0])
     mcov = np.mat(cov)
     del cov
     gc.collect()
@@ -68,22 +69,28 @@ def test(featpath, modelpath, outdir):
     fin = open(modelpath, 'r')
     model = pickle.load(fin)
     fin.close()
-    w = 128
-    h = 64
+#    w = 128
+#    h = 64
+
+    w = 64
+    h = 32
     print "load done!"
     for k in range(data.shape[0]):
         print str(k) + "/" + str(data.shape[0])
         y = data[k,:]
+        #pdb.set_trace()
         t = y - model['mf']
         t = model['covinvff'].dot(t)
         t = t.dot(model['covxf'])
         t = t + model['mx']
-        pdb.set_trace()
         t.shape = (h,w)
+        m0 = t.min()
+        m1 = t.max()
         img = np.zeros((h,w), dtype=np.uint8)
         for y in range(h):
             for x in range(w):
                 v = t[y,x]
+                v = (v - m0) * 255 / (m1 - m0)
                 v = np.minimum(v, 255)
                 v = np.maximum(v,  0)
                 img[y,x] = v 
@@ -94,8 +101,8 @@ if __name__ == "__main__":
     localdir = os.path.abspath('.') + '/'
     if len(sys.argv) == 2:
         if 0 == cmp(sys.argv[1], "-train"): 
-            main(localdir+"img.txt", localdir+"feat.txt", localdir+"invfeat.model")
+            train(localdir+"i.txt", localdir+"f.txt", localdir+"invfeat.model")
         elif 0 == cmp(sys.argv[1], "-test"):
-            test(localdir+"feat.txt", localdir+"invfeat.model", localdir+"out/")
+            test(localdir+"f-test.txt", localdir+"invfeat.model", localdir+"out/")
     else:
         print "-train or -test?"
