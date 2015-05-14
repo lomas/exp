@@ -64,8 +64,9 @@ def train(imgpath, featpath, outpath):
     fout.close()
 
 
-def test(featpath, modelpath, outdir):
-    data = load_data(featpath)
+def test(imgpath, featpath, modelpath, outdir):
+    feats = load_data(featpath)
+    imgs = load_data(imgpath)
     fin = open(modelpath, 'r')
     model = pickle.load(fin)
     fin.close()
@@ -75,11 +76,15 @@ def test(featpath, modelpath, outdir):
     w = 64
     h = 32
     print "load done!"
-    for k in range(data.shape[0]):
-        print str(k) + "/" + str(data.shape[0])
-        y = data[k,:]
+    for k in range(feats.shape[0]):
+        #print str(k) + "/" + str(feats.shape[0])
+        sys.stdout.write('.')
+        if 0 == (k+1)%50:
+            print str(k) + "/" + str(feats.shape[0])
+        onefeat = feats[k,:]
+        oneimg = imgs[k,:]
         #pdb.set_trace()
-        t = y - model['mf']
+        t = onefeat - model['mf']
         t = model['covinvff'].dot(t)
         t = t.dot(model['covxf'])
         t = t + model['mx']
@@ -94,15 +99,27 @@ def test(featpath, modelpath, outdir):
                 v = np.minimum(v, 255)
                 v = np.maximum(v,  0)
                 img[y,x] = v 
-        filepath = outdir + str(k) + '.jpg'
+        filepath = outdir + str(k) + '_rebuild.jpg'
         cv2.imwrite(filepath, img)
+        
+        oneimg.shape = (h,w)
+        for y in range(h):
+            for x in range(w):
+                v = oneimg[y,x]
+                v = np.minimum(v, 255)
+                v = np.maximum(v,  0)
+                img[y,x] = v 
+        filepath = outdir + str(k) + '_src.jpg'
+        cv2.imwrite(filepath, img)
+    print " "
+        
  
 if __name__ == "__main__":
     localdir = os.path.abspath('.') + '/'
     if len(sys.argv) == 2:
         if 0 == cmp(sys.argv[1], "-train"): 
-            train(localdir+"i.txt", localdir+"f.txt", localdir+"invfeat.model")
+            train(localdir+"img-train.txt", localdir+"feat-train.txt", localdir+"invfeat.model")
         elif 0 == cmp(sys.argv[1], "-test"):
-            test(localdir+"f-test.txt", localdir+"invfeat.model", localdir+"out/")
+            test(localdir+"img-test.txt", localdir+"feat-test.txt",localdir+"invfeat.model", localdir+"out/")
     else:
         print "-train or -test?"
