@@ -34,12 +34,13 @@ def main(imgdir, imgpath, featpath):
     
 if __name__ == "__main__":
     wkdir = os.path.abspath('.') + '/'
-    if len(sys.argv) == 3:
+    print len(sys.argv)
+    if len(sys.argv) == 2:
         if 0 == cmp(sys.argv[1], '-train'):
             main(wkdir+'train/', wkdir+'train-img.txt', wkdir+'train-feat.txt') 
         elif 0 == cmp(sys.argv[1], '-test'):
             main(wkdir+'test/', wkdir+'test-img.txt', wkdir+'test-feat.txt') 
         else:
             print 'unknown ' + sys.argv[1]
-    else
+    else:
         print 'train  or test'
