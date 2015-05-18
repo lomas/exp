@@ -48,20 +48,25 @@ def entry(rootdir, outdir):
     samples, filenames, sizes, attribs = load_sift(rootdir)
     print "run clustering\n"
     K = 512
-    connectivity = kneighbors_graph(samples, n_neighbors=10)
-    cluster_tree=skcluster.AgglomerativeClustering(K, connectivity=connectivity)
-    cluster_tree=cluster_tree.fit(samples)
-    joblib.dump(cluster_tree, 'models/cluster_tree.pkl')
+    #connectivity = kneighbors_graph(samples, n_neighbors=10, include_self=True
+    #model=skcluster.AgglomerativeClustering(K, connectivity=connectivity )
+    #model=model.fit(samples)
+    model = skcluster.KMeans(K)
+    model.fit(samples)
+    joblib.dump(model, 'models/model.pkl')
     print "clustering done\n"
+
+    ypred = model.predict(samples[0,:])
+    print "predict " + str(ypred)
     i = 0
     for idx in range(len(sizes)):
         fout = open(outdir+filenames[idx]+".clustersift","w")
         for k in range(sizes[idx]):
-            line = attribs[i*5] + " " + attribs[i*5+1] + " " + attribs[i*5+2] +" "+ attribs[i*5+3] +" "+ attribs[i*5+4] +" "+ str(cluster_tree.labels_[i]) + "\n"
+            line = attribs[i*5] + " " + attribs[i*5+1] + " " + attribs[i*5+2] +" "+ attribs[i*5+3] +" "+ attribs[i*5+4] +" "+ str(model.labels_[i]) + "\n"
             i = i + 1
             fout.write(line)
         fout.close()
-    return(cluster_tree)
+    return(model)
 if __name__=="__main__":
     rootdir=os.path.abspath('.') + '/'
     cluster = entry(rootdir+"sift/", "cluster/") 
