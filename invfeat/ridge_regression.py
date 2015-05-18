@@ -118,8 +118,8 @@ if __name__ == "__main__":
     localdir = os.path.abspath('.') + '/'
     if len(sys.argv) == 2:
         if 0 == cmp(sys.argv[1], "-train"): 
-            train(localdir+"img-train.txt", localdir+"feat-train.txt", localdir+"invfeat.model")
+            train(localdir+"train-img.txt", localdir+"train-feat.txt", localdir+"invfeat.model")
         elif 0 == cmp(sys.argv[1], "-test"):
-            test(localdir+"img-test.txt", localdir+"feat-test.txt",localdir+"invfeat.model", localdir+"out/")
+            test(localdir+"test-img.txt", localdir+"test-feat.txt",localdir+"invfeat.model", localdir+"out/")
     else:
         print "-train or -test?"
