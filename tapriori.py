@@ -33,15 +33,19 @@ class tapriori:
             if L[key] >= t:
                 fqits.append([key])
         print "# of freq_1 " + str(len(fqits))
+        #for k in range(len(fqits)):
+        #    print ' ' + str(k) + ' ' + str(fqits[k])
         return fqits
     
 
 
     def get_next_freqitems(self, prevfqits):
+#        pdb.set_trace()
         L = []
         prevsize = len(prevfqits[0])
         for its1 in prevfqits:
             for its2 in prevfqits:
+        #        pdb.set_trace()
                 mergable = 1
                 for k in range(prevsize - 1):
                     if its1[k] != its2[k]:
@@ -51,20 +55,30 @@ class tapriori:
                     continue
                 if its1[prevsize - 1] >= its2[prevsize - 1]:
                     continue
+
                 candi = its1 + [its2[prevsize - 1]]
 
                 if self.check_subset_freq(candi, prevfqits) == False:
                     continue
                 L.append(candi)
 
+        print "next fqits: step 1"
         fqdict = {}
+        num = 1
         for key in self.data.keys():
+            if 0 == num%500:
+                print("progress : %.5f\r" %(num*1.0/len(self.data))),
+            num = num + 1
             for each in L:
                 if set(each) <= set(self.data[key]): #subset of input items
                     if tuple(each) in fqdict:
                         fqdict[tuple(each)] += 1 #key should not be list. tuple is ok
                     else:
                         fqdict[tuple(each)] = 1
+
+
+        print ''
+        print "get fqits: step 2"
         t = self.minsup * len(self.data)
         L = []
         for key in fqdict.keys():
@@ -76,10 +90,14 @@ class tapriori:
     def run(self):
         prevfqits = self.get_freqitems_1()
         result = []
+        round = 1
         while prevfqits != []:
             result += prevfqits
             #pdb.set_trace()
             prevfqits = self.get_next_freqitems(prevfqits)
+            round = round + 1
+            print "round " + str(round) + "=============="
+            print prevfqits
         return result 
 
 def do_stat(dataDict, fs, freqItems):
@@ -122,7 +140,7 @@ if __name__=="__main__":
     rootdir = os.path.abspath('.') + '\\'
     data,flags = load_transc(rootdir + 'transc\\')
     #pdb.set_trace()
-    inst = tapriori(dataDict = data, minsupport=0.002, minconfidence=0.8)
+    inst = tapriori(dataDict = data, minsupport=0.005, minconfidence=0.8)
     items = inst.run()
     print "# of item with minimum support = " + str(len(items))
     result = do_stat(data, flags, items)
