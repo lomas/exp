@@ -56,16 +56,19 @@ if __name__ == "__main__":
             s = npos * 1.0 / (npos + nneg)
             if s > score:
                 score = s
+            x,y = kp[idx].pt
+            radius = int(kp[idx].size)
+            if radius < 2:
+                radius = 2
+            x = np.int32(x)
+            y = np.int32(y)
             if s > 0.8:
                 num2 = num2 + 1
-                x,y = kp[idx].pt
-                radius = int(kp[idx].size)
-                if radius < 2:
-                    radius = 2
                 red = int(150 + s * 100)
-                x = np.int32(x)
-                y = np.int32(y)
                 cv2.circle(colorimg, (x,y), radius, (0,0,red),2)
+            else:
+                cv2.circle(colorimg, (x,y), radius, (0,255,0),2)
+
     cv2.imwrite(outimg, colorimg)
     print("# of key: %d, max score = %f, # of pos key = %d" %(num1,score, num2))
 
