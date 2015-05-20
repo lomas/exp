@@ -23,8 +23,8 @@ def load_sift(rootdir):
                     line=rawline.strip().split(' ')
 
                     skip = skip + 1
-                    if 0 != skip % 4:
-                        continue
+#                    if 0 != skip % 4:
+#                        continue
 
                     num = num + 1
 		    if len(attribs)  < 1:
