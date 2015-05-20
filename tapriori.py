@@ -3,6 +3,25 @@ import sys
 import itertools
 import pdb
 import pickle
+from multiprocessing import Process
+
+#the key of dict of data and L is confused!!!
+
+def mt_fqits_get_freq(data, L, outpath):
+     fqdict = {}
+#     print outpath + " " + str(len(L))
+     for key in data.keys():
+        #pdb.set_trace()
+        for each in L:
+            if set(each) <= set(data[key]): #subset of input items
+                if tuple(each) in fqdict:
+                    fqdict[tuple(each)] += 1 #key should not be list. tuple is ok
+                else:
+                    fqdict[tuple(each)] = 1
+     fout = open(outpath, 'w')
+     pickle.dump(fqdict, fout)
+     fout.close()
+
 
 class tapriori:
     def __init__(self, dataDict , minsupport=0.2, minconfidence = 0.8):
@@ -14,6 +33,7 @@ class tapriori:
         subsets = itertools.combinations(candi, len(candi) - 1)
         for each in subsets:
             each = list(each)
+#            pdb.set_trace()
             if each not in prevfqits:
                 return False
         return True
@@ -29,6 +49,10 @@ class tapriori:
         fqits = [] #freq items 
 #        pdb.set_trace()
         t = len(self.data) * self.minsup
+        print "total of transc = " + str(len(self.data))
+        print "min sup ratio = " + str(self.minsup)
+        print "min sup number = " + str(t)
+        #pdb.set_trace()
         for key in L.keys():
             if L[key] >= t:
                 fqits.append([key])
@@ -56,34 +80,69 @@ class tapriori:
                 if its1[prevsize - 1] >= its2[prevsize - 1]:
                     continue
 
-                candi = its1 + [its2[prevsize - 1]]
+                candi = list(its1) + [its2[prevsize - 1]]
 
                 if self.check_subset_freq(candi, prevfqits) == False:
                     continue
+
+#                pdb.set_trace()
                 L.append(candi)
 
         print "next fqits: step 1"
-        fqdict = {}
-        num = 1
-        for key in self.data.keys():
-            if 0 == num%500:
-                print("progress : %.5f\r" %(num*1.0/len(self.data))),
-            num = num + 1
-            for each in L:
-                if set(each) <= set(self.data[key]): #subset of input items
-                    if tuple(each) in fqdict:
-                        fqdict[tuple(each)] += 1 #key should not be list. tuple is ok
+        if 0:
+            fqdict = {}
+            num = 1
+            for key in self.data.keys():
+                if 0 == num%500:
+                    print("progress : %.5f\r" %(num*1.0/len(self.data))),
+                num = num + 1
+                #pdb.set_trace()
+                for each in L:
+                    if set(each) <= set(self.data[key]): #subset of input items
+                        if tuple(each) in fqdict:
+                            fqdict[tuple(each)] += 1 #key should not be list. tuple is ok
+                        else:
+                            fqdict[tuple(each)] = 1
+        else:
+            plist = []
+            cpunum = 4
+            step = int(len(L)/cpunum)
+            for k in range(cpunum):
+                n0 = k * step
+                n1 = n0 + step
+                if n1 > len(L):
+                    n1 = len(L)
+                if k == cpunum and n1 != len(L):
+                    n1 = len(L)
+                outpath = "mt%d.txt"%(k)
+#                print "main " + " " + str(n0) + " " + str(n1) + " " + str(len(L))
+                p = Process(target = mt_fqits_get_freq, args = (self.data, L[n0:n1], outpath))
+                plist.append(p)
+                p.start()
+            for p in plist:
+                p.join()
+
+            fqdict = {}
+            for k in range(cpunum):
+                fin = open('mt%d.txt'%(k), 'r')
+                d = pickle.load(fin)
+                fin.close()
+                for key in d.keys():
+                    if key in fqdict:
+                        fqdict[key] += d[key]
                     else:
-                        fqdict[tuple(each)] = 1
-
-
+                        fqdict[key] = d[key]
         print ''
         print "get fqits: step 2"
         t = self.minsup * len(self.data)
         L = []
+        maxsup = 0
         for key in fqdict.keys():
+            if fqdict[key] > maxsup:
+                maxsup = fqdict[key]
             if fqdict[key] >= t:
                 L.append(list(key))
+        print "max sup = " + str(maxsup) 
         
         return L
        
@@ -104,11 +163,17 @@ def do_stat(dataDict, fs, freqItems):
     result = {}
     for item in freqItems:
         result[tuple(item)] = [0,0]
-    for key in dataDict.keys():
-        item = tuple(dataDict[key])
-        f = fs[key]
-        if item in result:
-            result[item][f] += 1
+#    pdb.set_trace()
+    for key in result.keys():
+        for k in dataDict.keys():
+            if set(key) <= set(dataDict[k]):
+                result[key][fs[k]] += 1
+
+#    for key in dataDict.keys():
+#        item = tuple(dataDict[key])
+#        f = fs[key]
+#        if item in result:
+#            result[item][f] += 1
     return result
 
 def example():
@@ -128,8 +193,10 @@ def load_transc(rootdir):
                 fin = open(fullpath, 'r')
                 for line in fin:
                     items = line.strip().split(' ')
+                    if len(items) < 2:
+                        continue
                     transc = [int(k) for k in items]
-                    result[nextkey] = transc[0:-1] #ignore the last item
+                    result[nextkey] = tuple(transc[0:-1]) #ignore the last item
                     flags[nextkey] = transc[-1]
                     nextkey += 1
                 fin.close()
@@ -140,7 +207,8 @@ if __name__=="__main__":
     rootdir = os.path.abspath('.') + '\\'
     data,flags = load_transc(rootdir + 'transc\\')
     #pdb.set_trace()
-    inst = tapriori(dataDict = data, minsupport=0.005, minconfidence=0.8)
+    print "# of transc = " + str(len(data))
+    inst = tapriori(dataDict = data, minsupport=0.0015, minconfidence=0.8)
     items = inst.run()
     print "# of item with minimum support = " + str(len(items))
     result = do_stat(data, flags, items)

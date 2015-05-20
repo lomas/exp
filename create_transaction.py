@@ -27,7 +27,10 @@ def create_transaction(data, K):
 		#		continue #excluding itself
 			f1,x1,y1,s1,a1,c1 = data[j,0:6]
 			if np.absolute(x1-x0) >= 1.5 * s0 or np.absolute(y1-y0) >= 1.5 * s0:
-				continue
+                            continue
+			if np.absolute(x1-x0) < 0.5 * s0 and np.absolute(y1-y0) < 0.5 * s0:
+                            continue #ignore center region 
+
 			dx = np.int32((x1 - x0)/s0)
 			dy = np.int32((y1 - y0)/s0)
 			dx = np.maximum(dx, -1)
@@ -69,6 +72,6 @@ def entry(rootdir,outdir, K):
 				fullpath = os.path.join(outdir, name + ".trasc")
 				save_transaction(trans, fullpath)
 if __name__ == "__main__":
-	K = 512 #cluster number
+	K = 2048 #cluster number
 	rootdir = os.path.abspath('.') + '/'
 	entry(rootdir + 'cluster/', rootdir + 'transc/', K)	

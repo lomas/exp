@@ -18,8 +18,14 @@ def load_sift(rootdir):
                 filepath=os.path.join(roots, name)
                 fin=open(filepath,'r')
                 num = 0
+                skip = 0
                 for rawline in fin:
                     line=rawline.strip().split(' ')
+
+                    skip = skip + 1
+                    if 0 != skip % 4:
+                        continue
+
                     num = num + 1
 		    if len(attribs)  < 1:
 			    attribs = [line[0], line[1], line[2], line[3], line[4]]
@@ -47,11 +53,11 @@ def load_sift(rootdir):
 def entry(rootdir, outdir):
     samples, filenames, sizes, attribs = load_sift(rootdir)
     print "run clustering\n"
-    K = 512
+    K = 2048
     #connectivity = kneighbors_graph(samples, n_neighbors=10, include_self=True
     #model=skcluster.AgglomerativeClustering(K, connectivity=connectivity )
     #model=model.fit(samples)
-    model = skcluster.KMeans(K)
+    model = skcluster.KMeans(K,n_jobs=-1,n_init=3)
     model.fit(samples)
     joblib.dump(model, 'models/model.pkl')
     print "clustering done\n"
