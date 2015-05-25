@@ -1,78 +1,132 @@
 import os
 import sys
 import sklearn.cluster as skcluster
-from sklearn.neighbors import kneighbors_graph #using connectivity to avoid memory error in clustring
 from sklearn.externals import joblib #save/load models
 import numpy as np
 import pdb
+import multiprocessing as mp
+import datetime
+from multiprocessing import cpu_count
+import  gc
 
-def load_sift(rootdir):
+
+def scanfor(indir, extname):
+    files = []
+    for rdirs, pdirs, names in os.walk(indir):
+        for name in names:
+            sname,ext = os.path.splitext(name)
+            if 0 == cmp(extname, ext):
+                fname = os.path.join(indir, name)
+                files.append((sname,fname))
+    return files
+
+def load_sift(siftfiles,binfo = 1):
     result = []
-    filename = [] #file name
-    size = [] #sift number in each file
     attribs = []
-    for roots,dirs,files in os.walk(rootdir):
-        for name in files:
-            shortname,ext = os.path.splitext(name)
-            if 0 == cmp(ext, ".sift"):
-                filepath=os.path.join(roots, name)
-                fin=open(filepath,'r')
-                num = 0
-                skip = 0
-                for rawline in fin:
-                    line=rawline.strip().split(' ')
-
-                    skip = skip + 1
-#                    if 0 != skip % 4:
-#                        continue
-
-                    num = num + 1
-		    if len(attribs)  < 1:
-			    attribs = [line[0], line[1], line[2], line[3], line[4]]
-		    else:
-			    attribs.extend([line[0], line[1], line[2], line[3], line[4]])
-                    for idx in range(len(line) - 5):
-                             if len(result) < 1:
-                                 result = [np.float32(line[idx+5])]
-                             else:
-                                 result.append(np.float32(line[idx+5]))
-
-                fin.close()
-                if len(size) < 1:
-                    size = [num]
-                    filename = [name]
-                else:
-                    size.append(num)
-                    filename.append(name)
-                print "load: " + shortname + " " + str(len(result)/128.0) + "\n"
+#    pdb.set_trace()
+    for k in range(len(siftfiles)):
+        shortname,fullname = siftfiles[k]
+        fin=open(fullname,'r')
+        num = 0
+        att = []
+        for rawline in fin:
+            line=rawline.strip().split(' ')
+            num = num + 1
+            if len(att)  < 1:
+                    att = [[line[0], line[1], line[2], line[3], line[4]]]
+            else:
+                    att.append([line[0], line[1], line[2], line[3], line[4]])
+            for idx in range(len(line) - 5):
+                     if len(result) < 1:
+                         result = [np.float32(line[idx+5])]
+                     else:
+                         result.append(np.float32(line[idx+5]))
+        if len(attribs) < 1:
+            attribs = [att]
+        else:
+            attribs.append(att)
+        fin.close()
+        if binfo == 1:
+            print "load: " + shortname + " " + '%d/%d'%(k+1, len(siftfiles))
     result = np.array(result)
     result.shape = (-1,128)
     print "result " + str(result.shape[0]) + " " + str(result.shape[1]) + "\n"
-    return((result,filename,size,attribs))
+    return((result,attribs))
 
-def entry(rootdir, outdir):
-    samples, filenames, sizes, attribs = load_sift(rootdir)
-    print "run clustering\n"
-    K = 2048
-    #connectivity = kneighbors_graph(samples, n_neighbors=10, include_self=True
-    #model=skcluster.AgglomerativeClustering(K, connectivity=connectivity )
-    #model=model.fit(samples)
-    model = skcluster.KMeans(K,n_jobs=-1,n_init=3)
-    model.fit(samples)
-    joblib.dump(model, 'models/model.pkl')
-    print "clustering done\n"
 
-    ypred = model.predict(samples[0,:])
-    print "predict " + str(ypred)
+def predict(siftfiles, outdir, modelpath,K):
+    samples, attribs = load_sift(siftfiles,0)
+    model = joblib.load(modelpath)
     i = 0
-    for idx in range(len(sizes)):
-        fout = open(outdir+filenames[idx]+".clustersift","w")
-        for k in range(sizes[idx]):
-            line = attribs[i*5] + " " + attribs[i*5+1] + " " + attribs[i*5+2] +" "+ attribs[i*5+3] +" "+ attribs[i*5+4] +" "+ str(model.labels_[i]) + "\n"
-            i = i + 1
+    t0 = datetime.datetime.now()
+    for idx in range(len(attribs)):
+        if 0 == (idx+1) % 20:
+            fout = open('cluster_%d.log' %os.getpid(),'a+')
+            t1 = datetime.datetime.now()
+            t2 = (t1 - t0).seconds / 60.0
+            line = '%d %d [%f %f]\n' %(idx+1, len(attribs), t2, t2 * len(attribs) / (idx+1) )
+            fout.write(line)
+            fout.close()
+        fout = open(outdir+siftfiles[idx][0]+".clustersift","w")
+        n = len(attribs[idx])
+        labels = model.predict(samples[i:i+n,:])
+        i = i + n
+       # pdb.set_trace()
+        for k in range(len(attribs[idx])):
+            line = attribs[idx][k][0]+" "+attribs[idx][k][1]+" "+attribs[idx][k][2]+" "+attribs[idx][k][3]+" "+attribs[idx][k][4]+" "+str(labels[k])+ "\n"
             fout.write(line)
         fout.close()
-    return(model)
+    return
+
+def mt_predict(indir,outdir, modelpath, K): 
+    siftfiles = scanfor(indir, '.sift')
+    tasknum = cpu_count() - 1
+    tasksize = int(len(siftfiles) / tasknum)
+    procs = []
+    for k in range(tasknum):
+        s0 = k * tasksize
+        s1 = s0 + tasksize
+        if s1 > len(siftfiles) or k + 1 == tasknum:
+            s1 = len(siftfiles)
+        p = mp.Process(target=predict, args=(siftfiles[s0:s1], outdir, modelpath, K))
+        procs.append(p)
+        p.start()
+    for p in procs:
+        p.join()
+    print "done"
+    return
+
+
+def entry(argv):
+    if len(argv) != 6:
+        print "error: indir K filestep modelpath outpath"
+        return
+    rootdir = argv[1]
+    K = int(argv[2])
+    resample = int(argv[3])
+    modelpath = argv[4]
+    outdir = argv[5]
+
+
+    siftfiles = scanfor(rootdir, '.sift')
+    samples,attribs = load_sift(siftfiles)
+    model = skcluster.KMeans(K,n_jobs=-1,n_init=3)
+    model.fit(samples[0::resample,:]) #using a small set to train
+    joblib.dump(model, modelpath)
+    del samples
+    del attribs
+    del model
+    gc.collect()
+    print "train done\n"
+
+    mt_predict(rootdir, outdir, modelpath, K)
+    print "predict done!"
+    return
+
+
+
+
 if __name__=="__main__":
-    rootdir=os.path.abspath('.') + '/'
-    cluster = entry(rootdir+"sift/", "cluster/") 
+    entry(sys.argv)
+
+
