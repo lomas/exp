@@ -17,9 +17,12 @@ def loadmodel(cluster_dir, rulepath):
     
 if __name__ == "__main__":
     inimg = sys.argv[1]
-    outimg = sys.argv[2]
-    K = 2048
-    clustertree, rules = loadmodel('models/model.pkl', 'rules.txt')
+    K = int(sys.argv[2])
+    thresh = float(sys.argv[3])
+    clustermodelpath = sys.argv[4]
+    rulefile = sys.argv[5]
+    outimg = sys.argv[6]
+    clustertree, rules = loadmodel(clustermodelpath, rulefile)
     siftdetect = cv2.SIFT()
     img = cv2.imread(inimg, 0)
     if img is None:
@@ -62,7 +65,7 @@ if __name__ == "__main__":
                 radius = 2
             x = np.int32(x)
             y = np.int32(y)
-            if s > 0.8:
+            if s > thresh:
                 num2 = num2 + 1
                 red = int(150 + s * 100)
                 cv2.circle(colorimg, (x,y), radius, (0,0,red),2)

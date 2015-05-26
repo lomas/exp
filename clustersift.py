@@ -61,7 +61,7 @@ def predict(siftfiles, outdir, modelpath,K):
     t0 = datetime.datetime.now()
     for idx in range(len(attribs)):
         if 0 == (idx+1) % 20:
-            fout = open('cluster_%d.log' %os.getpid(),'a+')
+            fout = open('cluster_prd_%d.log' %os.getpid(),'a+')
             t1 = datetime.datetime.now()
             t2 = (t1 - t0).seconds / 60.0
             line = '%d %d [%f %f]\n' %(idx+1, len(attribs), t2, t2 * len(attribs) / (idx+1) )

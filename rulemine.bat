@@ -1,13 +1,23 @@
 ::cluster number K is a global parameter across all modules
+@setlocal enableDelayedExpansion
+
+@set K=1024
+@set modelpath=models\model.pkl
+@set rulepath=rules.txt
+
+@set siftdir=sift\
+@set clusterdir=cluster\
+@set transcdir=transcdir\
+
 mkdir sift
 mkdir cluster
 mkdir transc
 
-::python siftfeat.py motor\pos\ sift\ pos
-::python siftfeat.py motor\neg\ sift\ neg
-python clustersift.py sift\ 1024 20 models\model.pkl cluster\
-::python clustersift.py sift\ 102 200 models\model.pkl cluster\
-pause
-python create_transaction.py cluster\ 1024 transc\
-python tapriori.py
-python detctwithrule.py src.jpg out.jpg
+python siftfeat.py motor\pos\ !siftdir! pos
+python siftfeat.py motor\neg\ !siftdir! neg
+python clustersift.py !siftdir! !K! 20 !modelpath! !clusterdir!
+python create_transaction.py !clusterdir! !K! !transcdir!
+python tapriori.py !transcdir! 0.002 0.8 !rulepath!
+python detectwithrule.py d:\tmp\mot\h2.jpg !K! 0.7 !modelpath! !rulepath! d:\tmp\mot\out.jpg
+
+@endlocal
