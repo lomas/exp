@@ -3,15 +3,27 @@ import sys
 import itertools
 import pdb
 import pickle
-from multiprocessing import Process
-
+from multiprocessing import Process,cpu_count
+import datetime
 #the key of dict of data and L is confused!!!
 
 def mt_fqits_get_freq(data, L, outpath):
      fqdict = {}
 #     print outpath + " " + str(len(L))
+     prg = 0 
+     t0 = datetime.datetime.now()
      for key in data.keys():
         #pdb.set_trace()
+        prg += 1
+        if len(data) > 10000 and 0 == prg%1000:
+            t1 = datetime.datetime.now()
+            t = (t1 - t0).seconds / 60.0
+            est = t * len(data) / prg
+            logfile = open('tapriori%d.log' %(os.getpid()),'a+')
+            line = '%f = %d/%d [%f, %f]\n' %(prg * 1.0 / len(data), prg, len(data), t, est)
+            logfile.write(line)
+            logfile.close()
+
         for each in L:
             if set(each) <= set(data[key]): #subset of input items
                 if tuple(each) in fqdict:
@@ -105,7 +117,7 @@ class tapriori:
                             fqdict[tuple(each)] = 1
         else:
             plist = []
-            cpunum = 4
+            cpunum = cpu_count() - 1
             step = int(len(L)/cpunum)
             for k in range(cpunum):
                 n0 = k * step
@@ -181,6 +193,39 @@ def example():
     inst = tapriori(dataDict = data)
     print inst.run()
 
+def balance_transc(result, flags):
+
+    nums = [0,0] 
+    for key in flags.keys():
+        nums[flags[key]] += 1
+   
+     
+    if nums[0] > nums[1]:
+        n0 = nums[1]
+        n1 = nums[0]
+    else:
+        n0 = nums[0]
+        n1 = nums[1]
+    if n0 * 100 > n1 * 90:
+        return result, flags
+
+    newresult = {}
+    newflags = {}
+   
+
+    nums = [0,0]
+    for key in flags.keys():
+        c = flags[key]
+        nums[c] += 1
+        if nums[c] < n0:
+            newflags[key] = c
+            newresult[key] = result[key]
+
+    return newresult,newflags 
+
+
+               
+
 def load_transc(rootdir):
     result = {}
     flags = {}
@@ -201,20 +246,29 @@ def load_transc(rootdir):
                     nextkey += 1
                 fin.close()
                 print shortname + ' ' + str(nextkey)
+    print "# raw transc " + str(len(flags))
+    result,flags = balance_transc(result,flags)
+    print "# balance transc " + str(len(flags))
     return result, flags
 
 if __name__=="__main__":
-    rootdir = os.path.abspath('.') + '\\'
-    data,flags = load_transc(rootdir + 'transc\\')
+    indir = sys.argv[1]
+    sup = float(sys.argv[2])
+    conf = float(sys.argv[3])
+    rulefile = sys.argv[4]
+
+    data,flags = load_transc(indir)
     #pdb.set_trace()
     print "# of transc = " + str(len(data))
-    inst = tapriori(dataDict = data, minsupport=0.0015, minconfidence=0.8)
+    inst = tapriori(dataDict = data, minsupport=sup, minconfidence=conf)
     items = inst.run()
     print "# of item with minimum support = " + str(len(items))
     result = do_stat(data, flags, items)
-    fout = open('rules.txt', 'w')
+    fout = open(rulefile, 'w')
     pickle.dump(result, fout)
     fout.close()
     print "key -> [neg, pos]"
     for key in result.keys():
-        print str(key) + "->" + str(result[key])
+        pos = result[key][1]
+        neg = result[key][0]
+        print str(key) + "->" + str(result[key]) + "->" + str(pos * 1.0 / (pos + neg))
