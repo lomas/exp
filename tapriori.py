@@ -230,6 +230,7 @@ def load_transc(rootdir):
     result = {}
     flags = {}
     nextkey = 0
+    filenum = 0
     for root, pdirs, names in os.walk(rootdir):
         for name in names:
             shortname,ext = os.path.splitext(name)
@@ -245,7 +246,12 @@ def load_transc(rootdir):
                     flags[nextkey] = transc[-1]
                     nextkey += 1
                 fin.close()
-                print shortname + ' ' + str(nextkey)
+                #print shortname + ' ' + str(nextkey)
+                print '.',
+                filenum+=1
+                if 0 == filenum % 50:
+                    print '%d'%filenum
+    print ''
     print "# raw transc " + str(len(flags))
     result,flags = balance_transc(result,flags)
     print "# balance transc " + str(len(flags))

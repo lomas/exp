@@ -53,10 +53,29 @@ def load_sift(siftfiles,binfo = 1):
     print "result " + str(result.shape[0]) + " " + str(result.shape[1]) + "\n"
     return((result,attribs))
 
-
+def predictNN(model, samples):
+    result = []
+    centers = model.cluster_centers_
+    K = centers.shape[0]
+    names = np.array(range(centers.shape[0])) + 1
+    for s in range(samples.shape[0]):
+        feat = samples[s,:]
+        feat = np.tile(feat, (K,1))
+        dist = np.mean(np.square(feat - centers),1)
+        thresh = dist.min()
+        f = dist < thresh * 1.2
+        f = list(names[f])
+        #pdb.set_trace()
+        if len(result) < 1:
+            result = [f]
+        else:
+            result.append(f)
+    return result
+     
 def predict(siftfiles, outdir, modelpath,K):
     samples, attribs = load_sift(siftfiles,0)
     model = joblib.load(modelpath)
+
     i = 0
     t0 = datetime.datetime.now()
     for idx in range(len(attribs)):
@@ -69,17 +88,24 @@ def predict(siftfiles, outdir, modelpath,K):
             fout.close()
         fout = open(outdir+siftfiles[idx][0]+".clustersift","w")
         n = len(attribs[idx])
-        labels = model.predict(samples[i:i+n,:])
+        #labels = model.predict(samples[i:i+n,:])
+        labels = predictNN(model, samples[i:i+n, :]) #get all near cluster centers
         i = i + n
-       # pdb.set_trace()
-        for k in range(len(attribs[idx])):
-            line = attribs[idx][k][0]+" "+attribs[idx][k][1]+" "+attribs[idx][k][2]+" "+attribs[idx][k][3]+" "+attribs[idx][k][4]+" "+str(labels[k])+ "\n"
+        for k in range(n):
+            labelnames = ""
+#            print labels[k]
+            for itm in labels[k]:
+                itm = int(itm)
+                labelnames = labelnames + str(itm) + ' '
+            #pdb.set_trace()
+            line = attribs[idx][k][0]+" "+attribs[idx][k][1]+" "+attribs[idx][k][2]+" "+attribs[idx][k][3]+" "+attribs[idx][k][4]+" "+labelnames+ "\n"
             fout.write(line)
         fout.close()
     return
 
 def mt_predict(indir,outdir, modelpath, K): 
     siftfiles = scanfor(indir, '.sift')
+
     tasknum = cpu_count() - 1
     tasksize = int(len(siftfiles) / tasknum)
     procs = []
@@ -93,6 +119,7 @@ def mt_predict(indir,outdir, modelpath, K):
         p.start()
     for p in procs:
         p.join()
+    #predict(siftfiles, outdir, modelpath, K)
     print "done"
     return
 
@@ -106,11 +133,9 @@ def entry(argv):
     resample = int(argv[3])
     modelpath = argv[4]
     outdir = argv[5]
-
-
     siftfiles = scanfor(rootdir, '.sift')
     samples,attribs = load_sift(siftfiles)
-    model = skcluster.KMeans(K,n_jobs=-1,n_init=3)
+    model = skcluster.KMeans(K,n_jobs=-2,n_init=1)
     model.fit(samples[0::resample,:]) #using a small set to train
     joblib.dump(model, modelpath)
     del samples
@@ -118,7 +143,6 @@ def entry(argv):
     del model
     gc.collect()
     print "train done\n"
-
     mt_predict(rootdir, outdir, modelpath, K)
     print "predict done!"
     return

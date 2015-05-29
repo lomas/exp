@@ -6,7 +6,7 @@ import sklearn.cluster as skcluster
 from sklearn.externals import joblib
 import pdb
 import pickle 
-import create_transaction
+import create_transaction, clustersift
 
 def loadmodel(cluster_dir, rulepath):
     clustertree = joblib.load(cluster_dir)
@@ -29,6 +29,7 @@ if __name__ == "__main__":
         print "error: null image !!!!!!!!!"
     kp = siftdetect.detect(img)
     kp,des = siftdetect.compute(img, kp)
+    """
     data = np.zeros((len(kp),6))
     for idxkp in range(len(kp)):
         f = -1
@@ -42,6 +43,21 @@ if __name__ == "__main__":
         data[idxkp,4] = angle
         feat = des[idxkp, :]
         data[idxkp,5] = clustertree.predict(feat)
+    """
+    data = []
+    for idxkp in range(len(kp)):
+        f = -1
+        x,y = kp[idxkp].pt
+        scale = kp[idxkp].size
+        angle = kp[idxkp].angle
+        d = [f,x,y,scale,angle]
+        feat = des[idxkp, :]
+        feat.shape = (-1, 128)
+        d.extend( clustersift.predictNN(clustertree, feat)[0] )
+        if len(data) < 1:
+            data = [d]
+        else:
+            data.append(d)
     trans = create_transaction.create_transaction(data, K)
     colorimg = cv2.cvtColor(img,cv2.COLOR_GRAY2BGR)
     print("# of kp: %d, # of trans: %d" %(len(kp), len(trans)))

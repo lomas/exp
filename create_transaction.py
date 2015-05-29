@@ -16,7 +16,7 @@ def scanfor(indir, extname):
     return files
 
 
-
+"""
 def load_clustersift(path):
 	result = []
 	file = open(path,'r')
@@ -31,9 +31,25 @@ def load_clustersift(path):
 	result.shape = (-1, 6)
 	file.close()
 	return(result)
+"""
+
+def load_clustersift(path):
+	result = []
+	file = open(path,'r')
+	for line in file:
+		elems = line.strip().split(' ')
+                data = [float(k) for k in elems]
+		if len(result) < 1:
+			result = [data]
+		else:
+			result.append(data)
+	file.close()
+	return(result)
+
+
 
 def create_transaction(data, K):
-	num = data.shape[0]
+	num = len(data)
 	result = []
         """
 	for k in range(num):
@@ -69,11 +85,13 @@ def create_transaction(data, K):
 #rotation invariance
 	for k in range(num):
 		mat = np.zeros((9, K))
-		f0,x0,y0,s0,a0,c0 = data[k, 0:6]
+		f0,x0,y0,s0,a0 = data[k][0:5]
+                c0 = data[k][5:]
 		for j in range(num):
 			if j == k:
 				continue #excluding itself
-			f1,x1,y1,s1,a1,c1 = data[j,0:6]
+			f1,x1,y1,s1,a1 = data[j][0:5]
+                        c1 = data[j][5:]
 			if np.absolute(x1-x0) >= 1.5 * s0 or np.absolute(y1-y0) >= 1.5 * s0:
                             continue
 			if np.absolute(x1-x0) < 0.2 * s0 and np.absolute(y1-y0) < 0.2 * s0:
@@ -87,13 +105,14 @@ def create_transaction(data, K):
                         pos = np.int32(pos / 40) #360 / 9 = 40
                         if pos >= 9:
                             pos = 8
-			mat[pos, np.int32(c1)] = 1
+                        for c in c1:
+                            mat[pos, int(c)-1] = 1
 		feat = []
 		for y in range(9):
 			for x in range(K):
 				if mat[y,x] == 0:
 					continue
-				feat.append(np.int32(y * K + x))
+				feat.append(np.int32(y * K + x+1))
 		feat.append(np.int32(f0))
 		result.append(feat)
 
