@@ -18,6 +18,6 @@ mkdir !transcdir!
 ::python clustersift.py !siftdir! !K! 50 !modelpath! !clusterdir!
 ::python create_transaction.py !clusterdir!\h\ !K! !transcdir!
 ::python tapriori.py !transcdir! 0.008 0.8 !rulepath!
-python detectwithrule.py d:\tmp\mot\h4.jpg !K! 0.7 !modelpath! !rulepath! d:\tmp\mot\out.jpg
+python detectwithrule.py d:\tmp\mot\h3.jpg !K! 0.6 !modelpath! !rulepath! d:\tmp\mot\out.jpg
 
 @endlocal
